@@ -8,7 +8,7 @@ package exceptionparser;
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    Johannes Lerch - initial API and implementation.
+ * Johannes Lerch - initial API and implementation.
  */
 
 public class StackTraceElement {

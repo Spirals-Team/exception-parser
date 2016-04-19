@@ -6,17 +6,17 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    Johannes Lerch - initial API and implementation.
+ * Johannes Lerch - initial API and implementation.
  */
 package exceptionparser;
+
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.collect.Lists;
-
-public class StackTrace extends BugDescription {
+public class StackTrace {
 
 	private String exceptionType;
 	private String message;
@@ -32,30 +32,27 @@ public class StackTrace extends BugDescription {
 		// Only for deserialization via gson
 	}
 
-	public StackTrace(Object o)
-	{
+	public StackTrace(Object o) {
 		String s = (String) o;
 		String[] tab = s.split("\n\t");
 		elements = new ArrayList<StackTraceElement>();
-		boolean first=true;
-		for(String content : tab)
-		{
-			if(first)
-			{
-				first=false;
-			}
-			else
-			{
+		boolean first = true;
+		for (String content : tab) {
+			if (first) {
+				first = false;
+			} else {
 				elements.add(new StackTraceElement(content));
 			}
 		}
 	}
 
-	public StackTrace(final String exceptionType, final String message, final List<StackTraceElement> elements) {
+	public StackTrace(final String exceptionType, final String message,
+			final List<StackTraceElement> elements) {
 		this(exceptionType, message, elements, null);
 	}
 
-	public StackTrace(final String exceptionType, final String message, final List<StackTraceElement> elements,
+	public StackTrace(final String exceptionType, final String message,
+			final List<StackTraceElement> elements,
 			final StackTrace causedBy) {
 
 		this.exceptionType = exceptionType;
@@ -63,11 +60,6 @@ public class StackTrace extends BugDescription {
 		this.elements = Lists.newLinkedList(elements);
 		//this.elementsWithoutRecursion=deleteRecursions(elements);
 		this.causedBy = causedBy;
-	}
-
-	@Override
-	public String getShortIdentifier() {
-		return String.format("[Bug: %s; Duplicate: %s; Number: %d]", bugId, duplicateId, number);
 	}
 
 	public String getExceptionType() {
@@ -88,28 +80,6 @@ public class StackTrace extends BugDescription {
 
 	public StackTrace getCausedBy() {
 		return causedBy;
-	}
-
-	@Override
-	public String toString() {
-		final StringBuilder builder = new StringBuilder();
-		builder.append(getExceptionType());
-		if (getMessage() != null) {
-			builder.append(": ");
-			builder.append(getMessage());
-		}
-
-		for (final StackTraceElement element : getElements()) {
-			builder.append("\n\t ");
-			builder.append(element.toString());
-		}
-
-		if (causedBy != null) {
-			builder.append("\nCaused by: ");
-			builder.append(causedBy.toString());
-		}
-
-		return builder.toString();
 	}
 
 	public String toStringWithoutRec() {
@@ -143,6 +113,133 @@ public class StackTrace extends BugDescription {
 			}
 		}
 		return true;
+	}
+
+	public void setNumber(final int i) {
+		this.number = i;
+	}
+
+	public void setCommentIndex(int commentIndex) {
+		this.commentIndex = commentIndex;
+	}
+
+	public int getCommentIndex() {
+		return commentIndex;
+	}
+
+	public int getNumber() {
+		return number;
+	}
+
+	/**
+	 *
+	 * @param stackTraces StackTrace where we have to remove recursions
+	 * @return list without recursion
+	 */
+	private static List<StackTraceElement> deleteRecursions(
+			List<StackTraceElement> stackTraces) {
+		List<StackTraceElement> tmp2 = stackTraces;
+		List<StackTraceElement> tmp = hasRecursion(stackTraces);
+
+		// While a recursion is found, try to delete recursions again
+		while (tmp.size() != tmp2.size()) {
+			tmp2 = tmp;
+			tmp = hasRecursion(tmp2);
+		}
+
+		return tmp;
+	}
+
+	public void deleteRecursions() {
+		List<StackTraceElement> tmp2 = elements;
+		List<StackTraceElement> tmp = hasRecursion(elements);
+
+		// While a recursion is found, try to delete recursions again
+		while (tmp.size() != tmp2.size()) {
+			tmp2 = tmp;
+			tmp = hasRecursion(tmp2);
+		}
+
+		elementsWithoutRecursion = tmp;
+	}
+
+	public Integer getSizeWithoutRecursion() {
+		return elementsWithoutRecursion.size();
+	}
+
+	/**
+	 *
+	 * @param stackTraces Stacktrace where a recursion has to be found/deleted
+	 * @return Stacktrace with deleted recursion if exists
+	 */
+	private static List<StackTraceElement> hasRecursion(List<StackTraceElement> stackTraces) {
+		List<StackTraceElement> contentFinal = new ArrayList<StackTraceElement>();
+		List<Integer> indexesToRemove = new ArrayList<Integer>();
+		List<Integer> indexesToIgnore = new ArrayList<Integer>();
+
+		contentFinal.addAll(stackTraces);
+		StackTraceElement current, similarFound;
+		boolean loop;
+
+		// Double loop : find similar "suites", removes it
+		for (int i = stackTraces.size() - 1; i > 0; i--) {
+			for (int j = 0; j < i; j++) {
+				if (i + (i - j) <= stackTraces.size() && !indexesToIgnore.contains(j)) {
+					current = stackTraces.get(i);
+					similarFound = stackTraces.get(j);
+					if (current.equals(similarFound)) {
+						loop = true;
+						for (int k = 0; k < (i - j); k++) {
+							if (!stackTraces.get(k + j).equals(stackTraces.get(i + k))) {
+								loop = false;
+								break;
+							}
+						}
+						if (loop) {
+							for (int k = j; k < i; k++) {
+								indexesToRemove.add(k);
+								indexesToIgnore.add(j + k);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Delete index to revert from the biggest value to the lowest
+		Collections.sort(indexesToRemove);
+		Collections.reverse(indexesToRemove);
+
+		for (Integer i : indexesToRemove) {
+			try {
+				contentFinal.remove((int) i);
+			} catch (Exception e) {
+				//TODO
+			}
+		}
+		return contentFinal;
+	}
+
+	@Override
+	public String toString() {
+		final StringBuilder builder = new StringBuilder();
+		builder.append(getExceptionType());
+		if (getMessage() != null) {
+			builder.append(": ");
+			builder.append(getMessage());
+		}
+
+		for (final StackTraceElement element : getElements()) {
+			builder.append("\n\t ");
+			builder.append(element.toString());
+		}
+
+		if (causedBy != null) {
+			builder.append("\nCaused by: ");
+			builder.append(causedBy.toString());
+		}
+
+		return builder.toString();
 	}
 
 	@Override
@@ -186,127 +283,5 @@ public class StackTrace extends BugDescription {
 		} else if (!message.equals(other.message))
 			return false;
 		return true;
-	}
-
-	public void setNumber(final int i) {
-		this.number = i;
-	}
-
-	public void setCommentIndex(int commentIndex) {
-		this.commentIndex = commentIndex;
-	}
-
-	public int getCommentIndex() {
-		return commentIndex;
-	}
-
-	public int getNumber() {
-		return number;
-	}
-
-	/**
-	 *
-	 * @param stackTraces StackTrace where we have to remove recursions
-	 * @return list without recursion
-	 */
-	private static List<StackTraceElement> deleteRecursions(List<StackTraceElement> stackTraces)
-	{
-		List<StackTraceElement> tmp2 = stackTraces;
-		List<StackTraceElement> tmp = hasRecursion(stackTraces);
-
-		// While a recursion is found, try to delete recursions again
-		while(tmp.size()!=tmp2.size())
-		{
-			tmp2=tmp;
-			tmp = hasRecursion(tmp2);
-		}
-
-		return tmp;
-	}
-
-	public void deleteRecursions()
-	{
-		List<StackTraceElement> tmp2 = elements;
-		List<StackTraceElement> tmp = hasRecursion(elements);
-
-		// While a recursion is found, try to delete recursions again
-		while(tmp.size()!=tmp2.size())
-		{
-			tmp2=tmp;
-			tmp = hasRecursion(tmp2);
-		}
-
-		elementsWithoutRecursion=tmp;
-	}
-
-	public Integer getSizeWithoutRecursion()
-	{
-		return elementsWithoutRecursion.size();
-	}
-
-	/**
-	 *
-	 * @param stackTraces Stacktrace where a recursion has to be found/deleted
-	 * @return Stacktrace with deleted recursion if exists
-	 */
-	private static List<StackTraceElement> hasRecursion(List<StackTraceElement> stackTraces)
-	{
-		List<StackTraceElement> contentFinal = new ArrayList<StackTraceElement>();
-		List<Integer> indexesToRemove = new ArrayList<Integer>();
-		List<Integer> indexesToIgnore = new ArrayList<Integer>();
-
-		contentFinal.addAll(stackTraces);
-		StackTraceElement current, similarFound;
-		boolean boucle;
-
-		// Double parcours : find similars "suites", removes it
-		for(int i=stackTraces.size()-1;i>0;i--)
-		{
-			for(int j=0;j<i;j++)
-			{
-				if(i+(i-j)<=stackTraces.size() && !indexesToIgnore.contains(j))
-				{
-					current = stackTraces.get(i);
-					similarFound = stackTraces.get(j);
-					if(current.equals(similarFound))
-					{
-						boucle=true;
-						for(int k=0;k<(i-j);k++)
-						{
-							if(!stackTraces.get(k+j).equals(stackTraces.get(i+k)))
-							{
-								boucle=false;
-								break;
-							}
-						}
-						if(boucle)
-						{
-							for(int k=j;k<i;k++)
-							{
-								indexesToRemove.add(k);
-								indexesToIgnore.add(j+k);
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Delete index to revert from the biggest value to the lowest
-		Collections.sort(indexesToRemove);
-		Collections.reverse(indexesToRemove);
-
-		for(Integer i : indexesToRemove)
-		{
-			try
-			{
-				contentFinal.remove((int)i);
-			}
-			catch(Exception e)
-			{
-				//TODO
-			}
-		}
-		return contentFinal;
 	}
 }
