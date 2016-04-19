@@ -1,4 +1,4 @@
-# Exception parser [![Build Status](https://travis-ci.org/Spirals-Team/exception-parser.svg?branch=master)](https://travis-ci.org/Spirals-Team/exception-parser)
+# Exception parser [![Build Status](https://travis-ci.org/Spirals-Team/exception-parser.svg?branch=master)](https://travis-ci.org/Spirals-Team/exception-parser) [![Coverage Status](https://coveralls.io/repos/github/Spirals-Team/exception-parser/badge.svg?branch=master)](https://coveralls.io/github/Spirals-Team/exception-parser?branch=master)
 
 Contributors:
 

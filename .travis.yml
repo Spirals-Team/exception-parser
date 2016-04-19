@@ -1,3 +1,14 @@
 language: java
+script: mvn test jacoco:report coveralls:report
 jdk:
 - oraclejdk7
+cache:
+  directories:
+  - "$HOME/.m2"
+env:
+  global:
+  - GITHUB_LOGIN=tdurieux
+  - secure: WaZjTKPAWTkUtwzQM8Uu1/nkU23cDJuKwA8aSXOu5oQ7NyXAxpNFdSERoZjOm2ub3LHdNRu2VUDYfs+yX0i9nmldRp2G6FP/2MhckUUbM565dhLT8t0ggmiuDMfQFUjejq2WPe+Uf989R+JxGJa4lMm+bq3LPKLOFnK+6oNpBx8Wz/KEAVWZgOldzdws8m8Gh/kqZLZ717OzT6wnTmDKlv0GKGhQWvjigm7VkONqjJS8r6cG5FmAMdcUFhww002mHtKPRK8VkTHn6SLj/uxwcwIvdCRA2HE1YhCxHZGAoyZpaF2mFt1ACFMbN6VhXkz+7+DzKCkyLGjcoYnxSuTDN5BWi0Rx8cY/CAmFyPYQ4inkL4e/rOktbOD9GYCIvfp5jzOIxXu9paaPZt5XnFXG+8rVxgA+CoCr1yFzPPnbVjTGvMmWcdCyVGf55ckkBPtvPU6EkdBQKxRY9o6xTb6qxeArCpQyO6cBtJKf79bN4bR7EJCXaNXsRCfXchMKvTRGPQvtMohIxwUcs9Yd5/2HFOUWY4FG0uzzoAYqWhmatgMhDybOBxY0D75q4JUPJaXGML7XtqMhaWPhrU6loNHPli6mrSRwYOAgtb9jjqw7b8XSGhNnw/z/ziyHlkivMeqRKIhIeGEh/anTiH3bKGXTPJbO13p7xrX0qzmq36Cq8MA=
+after_success:
+- '[[ $TRAVIS_BRANCH == "master" ]] && { mvn deploy --settings .travis-settings.xml
+  -DskipTests=true -B; };'
